@@ -1,0 +1,141 @@
+version: "3.8"
+
+services:
+  zipkin:
+     image: openzipkin/zipkin:latest
+     mem_limit: 700m
+     ports:
+      - "9411:9411"
+     networks:
+      - walgreens-network
+
+  configserver:
+     image: kanna0523/springconfig:latest
+     mem_limit: 700m
+     ports:
+      - "5056:5056"
+     networks:
+      - walgreens-network
+     depends_on:
+      - zipkin 
+     environment:
+         SPRING_PROFILES_ACTIVE: dev
+         SPRING_ZIPKIN_BASEURL: httpl://zipkin:9411/
+
+
+  eurekaserver:
+     image: kanna0523/eurekaserver:latest
+     mem_limit: 700m
+     ports:
+      - "5055:5055"
+     networks:
+      - walgreens-network 
+     depends_on:
+       - configserver
+       
+     deploy:
+       restart_policy:
+         condition: on-failure
+         delay: 5s
+         max_attempts: 3
+         window: 120s         
+     environment: 
+       SPRING_PROFILES_ACTIVE: dev
+       SPRING_CONFIG_IMPORT: configserver:http://configserver:5056
+       SPRING_ZIPKIN_BASEURL: httpl://zipkin:9411/ 
+              
+  accounts:
+     image: kanna0523/accounts:latest
+     mem_limit: 700m
+     ports:
+      - "8081:8081"
+     networks:
+      - walgreens-network 
+     depends_on:
+       - configserver
+       - eurekaserver
+     deploy:
+       restart_policy:
+         condition: on-failure
+         delay: 5s
+         max_attempts: 3
+         window: 120s         
+     environment: 
+       SPRING_PROFILES_ACTIVE: dev
+       SPRING_CONFIG_IMPORT: configserver:http://configserver:5056/
+       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:5055/eureka/
+       SPRING_ZIPKIN_BASEURL: httpl://zipkin:9411/
+       
+  loans:
+     image: kanna0523/loans:latest
+     mem_limit: 700m
+     ports:
+      - "8091:8091"
+     networks:
+      - walgreens-network
+     depends_on:     
+       - configserver
+       - eurekaserver
+     deploy:
+       restart_policy:
+         condition: on-failure
+         delay: 5s
+         max_attempts: 3
+         window: 120s   
+     environment: 
+       SPRING_PROFILES_ACTIVE: dev
+       SPRING_CONFIG_IMPORT: configserver:http://configserver:5056/
+       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:5055/eureka/
+       SPRING_ZIPKIN_BASEURL: httpl://zipkin:9411/
+         
+  cards:
+     image: kanna0523/cards:latest
+     mem_limit: 700m
+     ports:
+      - "8071:8071"
+     networks:
+      - walgreens-network
+     depends_on: 
+       - configserver
+       - eurekaserver
+     deploy:
+       restart_policy:
+         condition: on-failure
+         delay: 5s
+         max_attempts: 3
+         window: 120s         
+     environment: 
+       SPRING_PROFILES_ACTIVE: dev
+       SPRING_CONFIG_IMPORT: configserver:http://configserver:5056/
+       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:5055/eureka/
+       SPRING_ZIPKIN_BASEURL: httpl://zipkin:9411/
+  gatewayserver:
+     image: kanna0523/gatewayserver:latest
+     mem_limit: 700m
+     ports:
+      - "5054:5054"
+     networks:
+      - walgreens-network
+     depends_on: 
+       - configserver
+       - eurekaserver
+       - accounts
+       - loans
+       - cards
+     deploy:
+       restart_policy:
+         condition: on-failure
+         delay: 40s
+         max_attempts: 3
+         window: 180s         
+     environment: 
+       SPRING_PROFILES_ACTIVE: dev
+       SPRING_CONFIG_IMPORT: configserver:http://configserver:5056
+       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:5055/eureka/
+       SPRING_ZIPKIN_BASEURL: httpl://zipkin:9411/
+
+      
+networks:
+  walgreens-network:  
+        
+      

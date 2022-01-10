@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+
+  accounts:
+     image: kanna0523/accounts:latest
+     mem_limit: 700m
+     ports:
+      - "8081:8081"
+     networks:
+      - walgreens-network
+  loans:
+     image: kanna0523/loans:latest
+     mem_limit: 700m
+     ports:
+      - "8091:8091"
+     networks:
+      - walgreens-network
+  cards:
+     image: kanna0523/cards:latest
+     mem_limit: 700m
+     ports:
+      - "8071:8071"
+     networks:
+       - walgreens-network
+      
+      
+networks:
+  walgreens-network:  
+        
+      
